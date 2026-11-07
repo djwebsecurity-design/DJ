@@ -69,3 +69,11 @@ function openWA() {
   setTimeout(() => { btn.textContent = 'open →'; }, 1200);
   window.open('https://wa.me/447700000000?text=Hi%20dj%2C%20I%27d%20like%20a%20free%20security%20audit%20for%20my%20website%3A%20', '_blank');
 }
+
+// ── Wire up buttons (replaces inline onclick handlers) ──
+document.addEventListener('DOMContentLoaded', () => {
+  const copyBtn = document.getElementById('copy-email');
+  if (copyBtn) copyBtn.addEventListener('click', () => copyVal('email-val', 'copy-email'));
+  const waBtn = document.getElementById('wa-btn');
+  if (waBtn) waBtn.addEventListener('click', openWA);
+});
