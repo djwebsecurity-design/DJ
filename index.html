@@ -1,0 +1,1128 @@
+<title>DJ Web Security</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap">
+
+<style>
+/* ── Tokens ── dark-first */
+:root {
+  --bg:       #080b0f;
+  --bg2:      #0e1218;
+  --bg3:      #141920;
+  --border:   #1c2330;
+  --border2:  #252e3d;
+  --text:     #bbc6d4;
+  --muted:    #526070;
+  --dim:      #2a3545;
+  --heading:  #e4ecf4;
+  --accent:   #22d98a;
+  --accentdim:#0f4030;
+  --warn:     #f0a03e;
+  --danger:   #f05858;
+  --blue:     #4ca8f5;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg:       #f0f3f7;
+    --bg2:      #ffffff;
+    --bg3:      #e5eaf1;
+    --border:   #d0d8e4;
+    --border2:  #b8c4d4;
+    --text:     #344256;
+    --muted:    #7888a0;
+    --dim:      #c0cad8;
+    --heading:  #0f1a28;
+    --accent:   #0a9e62;
+    --accentdim:#d8f5eb;
+    --warn:     #c07010;
+    --danger:   #c03030;
+    --blue:     #1a6ebe;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg:       #f0f3f7;
+  --bg2:      #ffffff;
+  --bg3:      #e5eaf1;
+  --border:   #d0d8e4;
+  --border2:  #b8c4d4;
+  --text:     #344256;
+  --muted:    #7888a0;
+  --dim:      #c0cad8;
+  --heading:  #0f1a28;
+  --accent:   #0a9e62;
+  --accentdim:#d8f5eb;
+  --warn:     #c07010;
+  --danger:   #c03030;
+  --blue:     #1a6ebe;
+  color-scheme: light;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.65;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0;
+  overflow-x: hidden;
+}
+
+/* ── Utility ── */
+.wrap { max-width: 1000px; margin: 0 auto; }
+.mono { font-family: 'DM Mono', monospace; }
+
+/* ── Animations ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes scanline {
+  0%   { top: -4px; }
+  100% { top: 100%; }
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+@keyframes borderPulse {
+  0%, 100% { border-color: var(--border); }
+  50%       { border-color: var(--accent); }
+}
+
+.fade-up {
+  opacity: 0;
+  animation: fadeUp .7s cubic-bezier(.22,.68,0,1.2) forwards;
+}
+.fade-up.d1 { animation-delay: .1s; }
+.fade-up.d2 { animation-delay: .22s; }
+.fade-up.d3 { animation-delay: .34s; }
+.fade-up.d4 { animation-delay: .46s; }
+.fade-up.d5 { animation-delay: .58s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-up, [data-reveal] { opacity: 1 !important; transform: none !important; animation: none !important; transition: none !important; }
+}
+
+/* Scroll-reveal */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity .6s ease, transform .6s cubic-bezier(.22,.68,0,1.2);
+}
+[data-reveal].revealed {
+  opacity: 1;
+  transform: none;
+}
+
+/* ── NAV ── */
+nav {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 100;
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  transition: border-color .3s;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px);
+  z-index: 101;
+  background: var(--bg);
+}
+.nav-inner {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 16px 0;
+}
+.nav-logo {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--heading);
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.nav-logo-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse-dot 2.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+.nav-links {
+  display: flex;
+  gap: 28px;
+  list-style: none;
+  margin: 0; padding: 0;
+}
+.nav-links a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  transition: color .2s;
+}
+.nav-links a:hover { color: var(--heading); }
+.nav-cta {
+  margin-left: 24px;
+  background: var(--accent);
+  color: #050e09;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 16px;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: opacity .2s, transform .15s;
+  letter-spacing: 0.02em;
+}
+.nav-cta:hover { opacity: .88; transform: translateY(-1px); }
+
+@media (max-width: 600px) {
+  .nav-links { display: none; }
+  .nav-cta { display: none; }
+}
+
+/* ── HERO ── */
+.hero {
+  padding-block: 100px 80px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Grid background */
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 48px 48px;
+  opacity: 0.35;
+  pointer-events: none;
+}
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 60% at 50% 0%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 70%);
+  pointer-events: none;
+}
+
+.hero-inner {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 14px;
+  border-radius: 100px;
+  margin-bottom: 28px;
+}
+.hero-badge-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+
+.hero h1 {
+  font-size: clamp(2.4rem, 7vw, 4.4rem);
+  font-weight: 300;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  color: var(--heading);
+  margin-bottom: 22px;
+  max-width: 760px;
+}
+.hero h1 em {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.hero-sub {
+  font-size: 1.05rem;
+  color: var(--muted);
+  max-width: 500px;
+  line-height: 1.7;
+  margin-bottom: 36px;
+  font-weight: 300;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 64px;
+}
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 12px 24px;
+  border-radius: 5px;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all .2s;
+  border: 1px solid transparent;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  font-family: inherit;
+}
+.btn-primary {
+  background: var(--accent);
+  color: #050e09;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.btn-primary:hover { opacity: .86; transform: translateY(-2px); box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 20%, transparent); }
+.btn-outline {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border2);
+}
+.btn-outline:hover { border-color: var(--muted); color: var(--heading); transform: translateY(-1px); }
+
+/* ── Live scan ticker ── */
+.scan-ticker {
+  width: 100%;
+  max-width: 640px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  text-align: left;
+}
+.scan-ticker-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg3);
+}
+.td { width: 10px; height: 10px; border-radius: 50%; background: var(--dim); }
+.scan-ticker-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  margin-left: 6px;
+}
+.scan-lines {
+  padding: 16px 20px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11.5px;
+  line-height: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.sl { display: flex; align-items: center; gap: 10px; opacity: 0; }
+.sl.show { animation: fadeIn .3s forwards; }
+.sl-arrow { color: var(--dim); flex-shrink: 0; }
+.sl-label { color: var(--muted); flex: 1; }
+.sl-dots { color: var(--dim); letter-spacing: 2px; }
+.sl-pass { color: var(--accent); font-weight: 500; }
+.sl-fail { color: var(--danger); }
+.sl-warn { color: var(--warn); }
+.sl-info { color: var(--blue); }
+.scan-result-bar {
+  border-top: 1px solid var(--border);
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  opacity: 0;
+  transition: opacity .4s;
+}
+.scan-result-bar.show { opacity: 1; }
+.grade-big {
+  font-family: 'DM Mono', monospace;
+  font-size: 22px;
+  font-weight: 500;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+.gb-C { color: var(--warn); background: color-mix(in srgb, var(--warn) 10%, transparent); border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent); }
+.scan-result-text { font-size: 11px; color: var(--muted); line-height: 1.4; flex: 1; }
+.scan-result-text strong { color: var(--text); display: block; margin-bottom: 2px; }
+
+/* ── SECTION base ── */
+section { padding-block: 80px; }
+section + section { border-top: 1px solid var(--border); }
+
+.eyebrow {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 16px;
+}
+.section-h {
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  line-height: 1.18;
+  margin-bottom: 14px;
+  color: var(--heading);
+}
+.section-h strong { font-weight: 600; }
+.section-sub {
+  font-size: 15px;
+  color: var(--muted);
+  font-weight: 300;
+  max-width: 520px;
+  line-height: 1.7;
+  margin-bottom: 0;
+}
+
+/* ── WHAT I CHECK ── */
+.checks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 44px;
+}
+.check-card {
+  background: var(--bg2);
+  padding: 28px 24px;
+  transition: background .2s;
+}
+.check-card:hover { background: var(--bg3); }
+.check-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--dim);
+  letter-spacing: 0.1em;
+  margin-bottom: 14px;
+}
+.check-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--heading);
+  margin-bottom: 8px;
+}
+.check-desc {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.full-scan-note {
+  margin-top: 16px;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  background: var(--bg2);
+  position: relative;
+  overflow: hidden;
+}
+.full-scan-note::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--accent);
+}
+.full-scan-inner {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  padding: 24px 28px;
+  flex-wrap: wrap;
+}
+.full-scan-left { flex: 1; min-width: 260px; }
+.full-scan-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+.full-scan-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--heading);
+  margin-bottom: 8px;
+}
+.full-scan-desc {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+.full-scan-cta { flex-shrink: 0; font-size: 13px; }
+
+/* ── FINDINGS ── */
+.findings-wrap {
+  margin-top: 44px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.finding {
+  display: grid;
+  grid-template-columns: 80px 1fr 120px;
+  align-items: center;
+  gap: 16px;
+  background: var(--bg2);
+  padding: 14px 20px;
+  border: 1px solid var(--border);
+  transition: border-color .2s, background .2s;
+}
+.finding:hover { border-color: var(--border2); background: var(--bg3); }
+.finding:first-child { border-radius: 6px 6px 0 0; }
+.finding:last-child  { border-radius: 0 0 6px 6px; }
+.sev {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 3px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.sev-C { color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent); border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent); }
+.sev-H { color: var(--warn);   background: color-mix(in srgb, var(--warn) 10%, transparent);   border: 1px solid color-mix(in srgb, var(--warn) 25%, transparent); }
+.sev-M { color: var(--blue);   background: color-mix(in srgb, var(--blue) 10%, transparent);   border: 1px solid color-mix(in srgb, var(--blue) 25%, transparent); }
+.finding-label { font-size: 13px; color: var(--text); min-width: 0; }
+.finding-domain {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--dim);
+  text-align: right;
+}
+@media (max-width: 540px) {
+  .finding { grid-template-columns: 72px 1fr; }
+  .finding-domain { display: none; }
+}
+
+/* ── GRADES ── */
+.grades-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-top: 44px;
+}
+@media (max-width: 600px) { .grades-grid { grid-template-columns: 1fr 1fr; } }
+.grade-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 20px 16px;
+  transition: border-color .2s, transform .2s;
+}
+.grade-card:hover { transform: translateY(-3px); border-color: var(--border2); }
+.grade-letter-big {
+  font-family: 'DM Mono', monospace;
+  font-size: 2rem;
+  font-weight: 500;
+  margin-bottom: 10px;
+  line-height: 1;
+}
+.grade-name { font-size: 12px; font-weight: 600; color: var(--heading); margin-bottom: 6px; }
+.grade-desc { font-size: 11px; color: var(--muted); line-height: 1.55; }
+.gA { color: var(--accent); }
+.gB { color: var(--blue); }
+.gC { color: #90d0f0; }
+.gD { color: var(--warn); }
+.gF { color: var(--danger); }
+
+/* ── HOW IT WORKS ── */
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0;
+  margin-top: 44px;
+  position: relative;
+}
+.step {
+  padding: 32px 24px;
+  position: relative;
+}
+.step + .step::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 24px; bottom: 24px;
+  width: 1px;
+  background: var(--border);
+}
+@media (max-width: 540px) {
+  .steps { grid-template-columns: 1fr; }
+  .step + .step::before { left: 24px; top: 0; bottom: auto; width: auto; height: 1px; }
+}
+.step-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+  margin-bottom: 14px;
+}
+.step-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--heading);
+  margin-bottom: 8px;
+}
+.step-desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.steps-wrap {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* ── ABOUT ── */
+.about-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 48px;
+  margin-top: 44px;
+  align-items: start;
+}
+@media (max-width: 680px) { .about-layout { grid-template-columns: 1fr; gap: 28px; } }
+.about-p {
+  font-size: 15px;
+  color: var(--text);
+  font-weight: 300;
+  line-height: 1.75;
+  margin: 0 0 18px;
+}
+.about-p:last-child { margin-bottom: 0; }
+.stats-block {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.stat-row {
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.stat-row:last-child { border-bottom: none; }
+.stat-n {
+  font-family: 'DM Mono', monospace;
+  font-size: 1.9rem;
+  font-weight: 500;
+  color: var(--accent);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.stat-l { font-size: 11px; color: var(--muted); letter-spacing: 0.03em; }
+
+/* ── CONTACT ── */
+.contact-box {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 44px;
+  margin-top: 44px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 44px;
+  align-items: center;
+}
+@media (max-width: 640px) { .contact-box { grid-template-columns: 1fr; gap: 28px; padding: 28px 22px; } }
+.contact-lead {
+  font-size: 1.3rem;
+  font-weight: 300;
+  color: var(--heading);
+  line-height: 1.4;
+  margin-bottom: 12px;
+  letter-spacing: -0.01em;
+}
+.contact-sub { font-size: 13px; color: var(--muted); line-height: 1.6; }
+.contact-channels { display: flex; flex-direction: column; gap: 10px; }
+.channel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 14px;
+  transition: border-color .2s;
+}
+.channel:hover { border-color: var(--border2); }
+.channel-icon { font-size: 16px; flex-shrink: 0; }
+.channel-info { flex: 1; min-width: 0; }
+.channel-label { font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 1px; }
+.channel-val { font-size: 12px; color: var(--text); font-family: 'DM Mono', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.copy-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 3px;
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all .15s;
+  font-family: 'DM Mono', monospace;
+  flex-shrink: 0;
+}
+.copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+.copy-btn.ok { border-color: var(--accent); color: var(--accent); }
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding-block: 32px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.footer-logo {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.footer-logo-mark { color: var(--accent); font-weight: 500; }
+.footer-note { font-size: 11px; color: var(--dim); }
+
+/* ── Accent line divider ── */
+.accent-line {
+  width: 32px; height: 2px;
+  background: var(--accent);
+  border-radius: 1px;
+  margin-bottom: 20px;
+}
+</style>
+
+<!-- ═══ NAV ═══ -->
+<nav>
+  <div class="nav-inner wrap">
+    <div class="nav-logo">
+      <div class="nav-logo-dot"></div>
+      djwebsecurity.co.uk
+    </div>
+    <ul class="nav-links">
+      <li><a href="#checks">What I audit</a></li>
+      <li><a href="#grades">Grades</a></li>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#about">About</a></li>
+    </ul>
+    <a href="#contact" class="nav-cta">Get a free audit →</a>
+  </div>
+</nav>
+
+<!-- ═══ HERO ═══ -->
+<header class="hero">
+  <div class="wrap hero-inner">
+
+    <div class="hero-badge fade-up">
+      <div class="hero-badge-dot"></div>
+      Norwich Web Security
+    </div>
+
+    <h1 class="fade-up d1">
+      Your website might have<br><em>security gaps</em> you don't know about.
+    </h1>
+
+    <p class="hero-sub fade-up d2">
+      I run free, fully passive security audits on Norwich business websites and send you a plain-English report on what's missing — no jargon, no sales pitch.
+    </p>
+
+    <div class="hero-actions fade-up d3">
+      <a href="#contact" class="btn btn-primary">Get your free audit</a>
+      <a href="#checks" class="btn btn-outline">See what I check</a>
+    </div>
+
+    <!-- Live scan demo -->
+    <div class="scan-ticker fade-up d4">
+      <div class="scan-ticker-bar">
+        <div class="td"></div><div class="td"></div><div class="td"></div>
+        <span class="scan-ticker-title">demonstration · norwich-bakery.co.uk</span>
+      </div>
+      <div class="scan-lines" id="scan-lines">
+        <div class="sl" id="sl0"><span class="sl-arrow">→</span><span class="sl-label">checking HTTPS</span><span class="sl-dots">···</span></div>
+        <div class="sl" id="sl1"><span class="sl-arrow">→</span><span class="sl-label">content-security-policy</span><span class="sl-dots">···</span></div>
+        <div class="sl" id="sl2"><span class="sl-arrow">→</span><span class="sl-label">strict-transport-security</span><span class="sl-dots">···</span></div>
+        <div class="sl" id="sl3"><span class="sl-arrow">→</span><span class="sl-label">x-content-type-options</span><span class="sl-dots">···</span></div>
+        <div class="sl" id="sl4"><span class="sl-arrow">→</span><span class="sl-label">x-frame-options</span><span class="sl-dots">···</span></div>
+        <div class="sl" id="sl5"><span class="sl-arrow">→</span><span class="sl-label">referrer-policy</span><span class="sl-dots">···</span></div>
+        <div class="sl" id="sl6"><span class="sl-arrow">→</span><span class="sl-label">permissions-policy</span><span class="sl-dots">···</span></div>
+      </div>
+      <div class="scan-result-bar" id="scan-result">
+        <div class="grade-big gb-C">C</div>
+        <div class="scan-result-text">
+          <strong>3 issues found on norwich-bakery.co.uk</strong>
+          0 critical · 0 high · 3 medium · 0 low — full report generated
+        </div>
+      </div>
+    </div>
+
+  </div>
+</header>
+
+<!-- ═══ WHAT I CHECK ═══ -->
+<section id="checks">
+  <div class="wrap">
+    <div data-reveal>
+      <div class="eyebrow">What I audit</div>
+      <h2 class="section-h">A thorough passive scan.<br><strong>No credentials, no intrusion.</strong></h2>
+      <p class="section-sub">Every check uses ordinary HTTP requests — the same view a visitor has. No login, no authenticated access, no probing beyond what your site sends publicly.</p>
+    </div>
+
+    <div class="checks-grid">
+      <div class="check-card" data-reveal>
+        <div class="check-num">01</div>
+        <div class="check-title">HTTPS & transport</div>
+        <div class="check-desc">Confirms encryption is active and properly enforced. An unencrypted site leaks visitor data and hurts search rankings.</div>
+      </div>
+      <div class="check-card" data-reveal>
+        <div class="check-num">02</div>
+        <div class="check-title">Security headers</div>
+        <div class="check-desc">Six browser-level protections most websites skip. Each missing header is a gap that could be exploited.</div>
+      </div>
+      <div class="check-card" data-reveal>
+        <div class="check-num">03</div>
+        <div class="check-title">CSP quality</div>
+        <div class="check-desc">Having a Content Security Policy isn't enough — a misconfigured one can cancel out its own protection. I check for the common mistakes.</div>
+      </div>
+      <div class="check-card" data-reveal>
+        <div class="check-num">04</div>
+        <div class="check-title">Form exposure</div>
+        <div class="check-desc">Contact forms and input fields deserve extra scrutiny. I check whether they're exposing information they shouldn't be.</div>
+      </div>
+    </div>
+
+    <div class="full-scan-note" data-reveal>
+      <div class="full-scan-inner">
+        <div class="full-scan-left">
+          <div class="full-scan-label">Going further</div>
+          <div class="full-scan-title">Full active scan available</div>
+          <div class="full-scan-desc">The passive audit is always free and requires no access. For businesses that want to go deeper — with written permission I can run a full active scan: input validation testing, injection probing, and authenticated flow analysis. This surfaces vulnerabilities a passive scan can't see.</div>
+        </div>
+        <a href="#contact" class="btn btn-outline full-scan-cta">Ask about a full scan →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FINDINGS ═══ -->
+<section>
+  <div class="wrap">
+    <div data-reveal>
+      <div class="eyebrow">Real findings</div>
+      <h2 class="section-h">Issues found on<br><strong>Norwich business sites</strong></h2>
+      <p class="section-sub">These are real issue types from recent audits. Domains are anonymised.</p>
+    </div>
+
+    <div class="findings-wrap" data-reveal>
+      <div class="finding">
+        <span class="sev sev-C">Critical</span>
+        <span class="finding-label">Security policy allows malicious code injection</span>
+        <span class="finding-domain">restaurant ·co.uk</span>
+      </div>
+      <div class="finding">
+        <span class="sev sev-H">High</span>
+        <span class="finding-label">Browsers not instructed to always use encrypted connections</span>
+        <span class="finding-domain">tradesman ·co.uk</span>
+      </div>
+      <div class="finding">
+        <span class="sev sev-H">High</span>
+        <span class="finding-label">Protection against fake page embedding is missing</span>
+        <span class="finding-domain">salon ·co.uk</span>
+      </div>
+      <div class="finding">
+        <span class="sev sev-M">Medium</span>
+        <span class="finding-label">Browser features not restricted by an explicit Permissions-Policy header</span>
+        <span class="finding-domain">accountant ·co.uk</span>
+      </div>
+      <div class="finding">
+        <span class="sev sev-M">Medium</span>
+        <span class="finding-label">Visitor information may be shared with third-party sites</span>
+        <span class="finding-domain">solicitor ·co.uk</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ GRADES ═══ -->
+<section id="grades">
+  <div class="wrap">
+    <div data-reveal>
+      <div class="eyebrow">The grading system</div>
+      <h2 class="section-h">One letter.<br><strong>Instant read.</strong></h2>
+      <p class="section-sub">Every audit produces an indicative grade based on the checks performed. It reflects what a passive scan can see — not the complete security posture of a website.</p>
+    </div>
+
+    <div class="grades-grid">
+      <div class="grade-card" data-reveal>
+        <div class="grade-letter-big gA">A</div>
+        <div class="grade-name">No issues found</div>
+        <div class="grade-desc">Nothing flagged by the passive checks. Good baseline — not a guarantee of complete security.</div>
+      </div>
+      <div class="grade-card" data-reveal>
+        <div class="grade-letter-big gB">B</div>
+        <div class="grade-name">Minor gaps</div>
+        <div class="grade-desc">A few low-severity issues. No immediate risk, but worth addressing.</div>
+      </div>
+      <div class="grade-card" data-reveal>
+        <div class="grade-letter-big gC">C</div>
+        <div class="grade-name">Worth fixing</div>
+        <div class="grade-desc">Medium-severity issues present. Common — several headers missing.</div>
+      </div>
+      <div class="grade-card" data-reveal>
+        <div class="grade-letter-big gD">D</div>
+        <div class="grade-name">Needs attention</div>
+        <div class="grade-desc">High-severity issues. Visitors may be exposed to real risks.</div>
+      </div>
+      <div class="grade-card" data-reveal>
+        <div class="grade-letter-big gF">E/F</div>
+        <div class="grade-name">Act now</div>
+        <div class="grade-desc">Multiple serious gaps flagged. Worth treating as urgent and reviewing with a developer.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ HOW IT WORKS ═══ -->
+<section id="how">
+  <div class="wrap">
+    <div data-reveal>
+      <div class="eyebrow">How it works</div>
+      <h2 class="section-h">Simple.<br><strong>No setup needed.</strong></h2>
+    </div>
+
+    <div class="steps-wrap" data-reveal>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">01</div>
+          <div class="step-title">Send me your URL</div>
+          <div class="step-desc">Just your website address. No login, no access, no personal details needed beyond how to reach you with the report.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <div class="step-title">I run the audit</div>
+          <div class="step-desc">A passive scan checks your headers, encryption, security policy, and more — usually completed the same day.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <div class="step-title">You get the report</div>
+          <div class="step-desc">A PDF report with your grade, every issue found, and a plain-English explanation of what each one means and what it could lead to.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">04</div>
+          <div class="step-title">Your call</div>
+          <div class="step-desc">No obligation. If something needs fixing, I can explain the options or point you toward someone who can help.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ABOUT ═══ -->
+<section id="about">
+  <div class="wrap">
+    <div data-reveal>
+      <div class="eyebrow">About</div>
+      <h2 class="section-h">Web security<br><strong>for Norwich businesses</strong></h2>
+    </div>
+
+    <div class="about-layout">
+      <div data-reveal>
+        <p class="about-p">I'm dj, based in Norwich. I built the tools that generate these reports to surface the security issues most small business websites have without realising it.</p>
+        <p class="about-p">Most web developers focus on how a site looks. Security headers, CSP configuration, and transport policy are often left at defaults — which means they're often wrong. These aren't exotic issues. They turn up on most sites.</p>
+        <p class="about-p">The audit is completely passive and free. I don't touch your server, I don't need any access, and there's no obligation. If something needs fixing, I can explain what it takes or point you in the right direction.</p>
+      </div>
+      <div class="stats-block" data-reveal>
+        <div class="stat-row">
+          <div class="stat-n">6+</div>
+          <div class="stat-l">security checks per site</div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-n">A–F</div>
+          <div class="stat-l">grade based on severity</div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-n">0</div>
+          <div class="stat-l">server access required</div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-n">Free</div>
+          <div class="stat-l">no cost, no obligation</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CONTACT ═══ -->
+<section id="contact">
+  <div class="wrap">
+    <div data-reveal>
+      <div class="eyebrow">Get in touch</div>
+      <h2 class="section-h">Want a free audit<br><strong>for your site?</strong></h2>
+    </div>
+
+    <div class="contact-box" data-reveal>
+      <div>
+        <div class="contact-lead">Drop me a message with your website URL and I'll send the full report back — usually same day.</div>
+        <p class="contact-sub">Norwich-based businesses only. No cost, no obligation, no follow-up unless you want one.</p>
+      </div>
+      <div class="contact-channels">
+        <div class="channel">
+          <div class="channel-icon">📧</div>
+          <div class="channel-info">
+            <div class="channel-label">Email</div>
+            <div class="channel-val" id="email-val">djwebsecurity@gmail.com</div>
+          </div>
+          <button class="copy-btn" id="copy-email" onclick="copyVal('email-val','copy-email')">copy</button>
+        </div>
+        <div class="channel">
+          <div class="channel-icon">💬</div>
+          <div class="channel-info">
+            <div class="channel-label">WhatsApp</div>
+            <div class="channel-val">Message me directly</div>
+          </div>
+          <button class="copy-btn" id="wa-btn" onclick="openWA()">open →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<footer class="wrap">
+  <div class="footer-logo">
+    <div class="nav-logo-dot" style="animation-delay:.8s"></div>
+    <span class="footer-logo-mark">djwebsecurity</span>.co.uk
+  </div>
+  <div class="footer-note">Norwich, Norfolk · Free passive security audits</div>
+</footer>
+
+<script>
+// ── Scan animation ──
+const results = [
+  'pass','fail','fail','pass','warn','pass','warn'
+];
+const labels = [
+  '<span class="sl-pass">✓ encrypted</span>',
+  '<span class="sl-fail">✗ missing</span>',
+  '<span class="sl-fail">✗ missing</span>',
+  '<span class="sl-pass">✓ present</span>',
+  '<span class="sl-warn">⚠ missing</span>',
+  '<span class="sl-pass">✓ present</span>',
+  '<span class="sl-warn">⚠ missing</span>',
+];
+
+let scanStarted = false;
+function startScan() {
+  if (scanStarted) return;
+  scanStarted = true;
+  results.forEach((_, i) => {
+    setTimeout(() => {
+      const el = document.getElementById('sl' + i);
+      el.classList.add('show');
+      el.querySelector('.sl-dots').style.display = 'none';
+      el.insertAdjacentHTML('beforeend', labels[i]);
+      if (i === results.length - 1) {
+        setTimeout(() => {
+          document.getElementById('scan-result').classList.add('show');
+        }, 400);
+      }
+    }, 300 + i * 320);
+  });
+}
+
+// Start scan when hero is visible
+const heroObs = new IntersectionObserver(entries => {
+  if (entries[0].isIntersecting) { setTimeout(startScan, 800); heroObs.disconnect(); }
+}, { threshold: 0.3 });
+const ticker = document.querySelector('.scan-ticker');
+if (ticker) heroObs.observe(ticker);
+
+// ── Scroll reveal ──
+const revealObs = new IntersectionObserver(entries => {
+  entries.forEach((e, i) => {
+    if (e.isIntersecting) {
+      e.target.style.transitionDelay = (i * 0.05) + 's';
+      e.target.classList.add('revealed');
+      revealObs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.12 });
+document.querySelectorAll('[data-reveal]').forEach(el => revealObs.observe(el));
+
+// ── Copy ──
+function copyVal(id, btnId) {
+  const text = document.getElementById(id).textContent;
+  const btn  = document.getElementById(btnId);
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✓ copied';
+    btn.classList.add('ok');
+    setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('ok'); }, 1800);
+  }).catch(() => {
+    btn.textContent = 'select & copy';
+    setTimeout(() => { btn.textContent = 'copy'; }, 2000);
+  });
+}
+function openWA() {
+  const btn = document.getElementById('wa-btn');
+  btn.textContent = '↗';
+  setTimeout(() => { btn.textContent = 'open →'; }, 1200);
+  window.open('https://wa.me/447700000000?text=Hi%20dj%2C%20I%27d%20like%20a%20free%20security%20audit%20for%20my%20website%3A%20', '_blank');
+}
+</script>
