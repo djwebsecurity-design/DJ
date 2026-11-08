@@ -72,6 +72,12 @@ function openWA() {
 
 // ── Wire up buttons (replaces inline onclick handlers) ──
 document.addEventListener('DOMContentLoaded', () => {
+  // Assemble email at runtime — not in HTML source (prevents bot harvesting)
+  const ev = document.getElementById('email-val');
+  if (ev && ev.dataset.e && ev.dataset.d) {
+    ev.textContent = ev.dataset.e + '@' + ev.dataset.d;
+  }
+
   const copyBtn = document.getElementById('copy-email');
   if (copyBtn) copyBtn.addEventListener('click', () => copyVal('email-val', 'copy-email'));
   const waBtn = document.getElementById('wa-btn');
